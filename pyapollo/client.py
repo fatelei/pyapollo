@@ -43,7 +43,7 @@ class ApolloClient(object):
     
     def get_config(self, release_key: str = None):
         if not release_key:
-            if self.data_format != 'properties':
+            if self.data_format != 'c':
                 path = f'/configs/{self.app_id}/{self.cluster}/{self.namespace}.{self.data_format}?ip={self.ip}'
             else:
                 path = f'/configs/{self.app_id}/{self.cluster}/{self.namespace}?ip={self.ip}'
@@ -58,10 +58,10 @@ class ApolloClient(object):
         resp = httpx.get(url, headers=headers)
         if resp.status_code == 200:
             data = resp.json()
-            if self.data_format == 'properties':
-                return data['configurations']
-            else:
-                return data['content']
+            configurations = data['configurations']
+            if self.data_format == 'json':
+                return json.loads(configurations['content'])
+            return configurations
         else:
             raise ConfigException(resp.text)
     
@@ -73,13 +73,13 @@ class ApolloClient(object):
             if self.exit_thread:
                 return
             if namespace not in self.notification_map:
-                self.notification_map[namespace] = 1
+                self.notification_map[namespace] = -1
             notification_id = self.notification_map[namespace]
             params = {
                 "appId": app_id,
                 "cluster": cluster_name,
                 "notifications": json.dumps([{
-                    "namespaceName": namespace,
+                    "namespaceName": namespace if self.data_format == 'properties' else f'{namespace}.{self.data_format}',
                     "notificationId": notification_id
                 }])
             }
@@ -87,7 +87,6 @@ class ApolloClient(object):
             async with httpx.AsyncClient() as client:
                 try:
                     r = await client.get(url, params=params, timeout=61)
-                    print(r.text)
                     if r.status_code == 200:
                         notification_data = r.json()
                         self.notification_map[namespace] = notification_data[0]['notificationId']

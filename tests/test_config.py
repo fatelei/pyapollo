@@ -15,4 +15,4 @@ class TestConfigManager(unittest.TestCase):
         config = ConfigManager(apollo_host='http://localhost:8080',
                                app_id='foo',
                                namespace='bar')
-        self.assertEqual('bar', config['foo'])
+        self.assertEqual('bar', config.get_from_json("foo"))
