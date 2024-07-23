@@ -18,7 +18,7 @@ from .exception import ConfigException
 class ApolloClient(object):
     
     def __init__(self, apollo_host: str, app_id: str, namespace, cluster: str = 'default',
-                 secret: str = '', callback=None):
+                 secret: str = '', callback=None, data_format='properties'):
         self.apollo_host = apollo_host
         self.app_id = app_id
         self.cluster = cluster
@@ -30,6 +30,7 @@ class ApolloClient(object):
             target=self.do_long_polling_refresh, name='refresh_config',
             args=(app_id, cluster, namespace, callback))
         self.exit_thread = False
+        self.data_format = data_format
     
     @property
     def ip(self):
@@ -42,15 +43,25 @@ class ApolloClient(object):
     
     def get_config(self, release_key: str = None):
         if not release_key:
-            path = f'/configs/{self.app_id}/{self.cluster}/{self.namespace}?ip={self.ip}'
+            if self.data_format != 'properties':
+                path = f'/configs/{self.app_id}/{self.cluster}/{self.namespace}.{self.data_format}?ip={self.ip}'
+            else:
+                path = f'/configs/{self.app_id}/{self.cluster}/{self.namespace}?ip={self.ip}'
         else:
-            path = f'/configs/{self.app_id}/{self.cluster}/{self.namespace}?ip={self.ip}&releaseKey={release_key}'
+            if self.data_format != 'properties':
+                path = f'/configs/{self.app_id}/{self.cluster}/{self.namespace}.{self.data_format}?ip={self.ip}&releaseKey={release_key}'
+            else:
+                path = f'/configs/{self.app_id}/{self.cluster}/{self.namespace}?ip={self.ip}&releaseKey={release_key}'
         url = f'{self.apollo_host}{path}'
         headers = self.get_headers(path)
         
         resp = httpx.get(url, headers=headers)
         if resp.status_code == 200:
-            return resp.json()['configurations']
+            data = resp.json()
+            if self.data_format == 'properties':
+                return data['configurations']
+            else:
+                return data['content']
         else:
             raise ConfigException(resp.text)
     
