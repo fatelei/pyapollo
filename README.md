@@ -9,7 +9,7 @@ apollo_host = 'http://localhost:8080'
 app_id = 'SampleApp'
 namespace = 'application'
 config = ConfigManager(apollo_host=apollo_host, app_id=app_id, namespace=namespace)
-bar = config['foo']
+bar = config.get_from_json("foo")
 # if you want enable hot reload config
 config.enable_hot_reload()
 ```
