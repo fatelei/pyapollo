@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import base64
 import hashlib
 import hmac
@@ -29,8 +30,9 @@ class ApolloClient(object):
         self.thread = threading.Thread(
             target=self.do_long_polling_refresh, name='refresh_config',
             args=(app_id, cluster, namespace, callback))
-        self.exit_thread = False
+        self.exit_thread = threading.Event()
         self.data_format = data_format
+        atexit.register(self.cleanup)
     
     @property
     def ip(self):
@@ -67,10 +69,14 @@ class ApolloClient(object):
     
     def start_long_polling(self):
         self.thread.start()
+
+    def cleanup(self):
+        self.exit_thread.set()
+        self.thread.join(timeout=2)
     
     async def __long_polling(self, app_id, cluster_name, namespace, callback=None):
         while True:
-            if self.exit_thread:
+            if self.exit_thread.is_set():
                 return
             if namespace not in self.notification_map:
                 self.notification_map[namespace] = -1
