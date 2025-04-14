@@ -30,6 +30,7 @@ class ApolloClient(object):
         self.thread = threading.Thread(
             target=self.do_long_polling_refresh, name='refresh_config',
             args=(app_id, cluster, namespace, callback))
+        self.thread.daemon = True
         self.exit_thread = threading.Event()
         self.data_format = data_format
         atexit.register(self.cleanup)
