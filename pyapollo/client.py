@@ -18,14 +18,21 @@ from .exception import ConfigException
 
 class ApolloClient(object):
     
-    def __init__(self, apollo_host: str, app_id: str, namespace, cluster: str = 'default',
-                 secret: str = '', callback=None, data_format='properties'):
+    def __init__(self,
+                 apollo_host: str,
+                 app_id: str, namespace,
+                 cluster: str = 'default',
+                 secret: str = '',
+                 callback=None,
+                 timeout=1,
+                 data_format='properties'):
         self.apollo_host = apollo_host
         self.app_id = app_id
         self.cluster = cluster
         self.secret = secret
         self.namespace = namespace
         self.notification_map = defaultdict(int)
+        self.client = httpx.Client(timeout=timeout)
         self._ip = None
         self.thread = threading.Thread(
             target=self.do_long_polling_refresh, name='refresh_config',
@@ -58,7 +65,7 @@ class ApolloClient(object):
         url = f'{self.apollo_host}{path}'
         headers = self.get_headers(path)
         
-        resp = httpx.get(url, headers=headers)
+        resp = self.client.get(url, headers=headers)
         if resp.status_code == 200:
             data = resp.json()
             configurations = data['configurations']

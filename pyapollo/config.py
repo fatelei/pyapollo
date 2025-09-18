@@ -8,7 +8,7 @@ from .exception import InvalidFormatException
 class ConfigManager(object):
     
     def __init__(self, apollo_host: str, app_id: str, namespace, cluster: str = 'default',
-                 secret: str = '', file_cache_dir='/tmp', data_format='properties'):
+                 secret: str = '', file_cache_dir='/tmp', data_format='properties', timeout=1):
         self.cluster_name = cluster
         self.app_id = app_id
         self.file_cache_dir = file_cache_dir
@@ -22,6 +22,7 @@ class ConfigManager(object):
                                    cluster=cluster,
                                    secret=secret,
                                    callback=self.receive_notification,
+                                   timeout=timeout,
                                    data_format=data_format)
     
     def restore_from_file(self):
