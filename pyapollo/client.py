@@ -65,15 +65,18 @@ class ApolloClient(object):
         url = f'{self.apollo_host}{path}'
         headers = self.get_headers(path)
         
-        resp = self.client.get(url, headers=headers)
-        if resp.status_code == 200:
-            data = resp.json()
-            configurations = data['configurations']
-            if self.data_format == 'json':
-                return json.loads(configurations['content'])
-            return configurations
-        else:
-            raise ConfigException(resp.text)
+        try:
+            resp = self.client.get(url, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                configurations = data['configurations']
+                if self.data_format == 'json':
+                    return json.loads(configurations['content'])
+                return configurations
+            else:
+                raise ConfigException(resp.text)
+        except httpx.TimeoutException:
+            pass
     
     def start_long_polling(self):
         self.thread.start()
@@ -100,13 +103,13 @@ class ApolloClient(object):
             url = f'{self.apollo_host}/notifications/v2'
             async with httpx.AsyncClient() as client:
                 try:
-                    r = await client.get(url, params=params, timeout=61)
+                    r = await client.get(url, params=params, timeout=5)
                     if r.status_code == 200:
                         notification_data = r.json()
                         self.notification_map[namespace] = notification_data[0]['notificationId']
                         try:
                             data = self.get_config()
-                            if callback:
+                            if callback and data:
                                 callback(data)
                         except (ConfigException, ReadTimeout):
                             pass

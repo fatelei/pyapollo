@@ -2,7 +2,7 @@ import json
 import os
 
 from .client import ApolloClient
-from .exception import InvalidFormatException
+from .exception import InvalidFormatException, ConfigException
 
 
 class ConfigManager(object):
@@ -50,8 +50,12 @@ class ConfigManager(object):
             if not self.config:
                 self.restore_from_file()
                 if not self.config:
-                    self.config = self.client.get_config()
-                    self.sync_to_file()
+                    data = self.client.get_config()
+                    if data:
+                        self.config = data
+                        self.sync_to_file()
+                    else:
+                        raise ConfigException('No config found for timeout')
             return self.config.get(key, default)
         else:
             raise InvalidFormatException("only support properties / json")
