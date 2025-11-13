@@ -32,7 +32,8 @@ class ApolloClient(object):
         self.secret = secret
         self.namespace = namespace
         self.notification_map = defaultdict(int)
-        self.client = httpx.Client(timeout=timeout)
+        self.client = httpx.Client(
+            timeout=timeout, limits=self.__get_default_transport_limits())
         self._ip = None
         self.thread = threading.Thread(
             target=self.do_long_polling_refresh, name='refresh_config',
@@ -101,7 +102,7 @@ class ApolloClient(object):
                 }])
             }
             url = f'{self.apollo_host}/notifications/v2'
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(limits=self.__get_default_transport_limits()) as client:
                 try:
                     r = await client.get(url, params=params, timeout=5)
                     if r.status_code == 200:
@@ -116,7 +117,10 @@ class ApolloClient(object):
                 except ReadTimeout:
                     pass
             await asyncio.sleep(5)
-    
+
+    def __get_default_transport_limits(self):
+        return httpx.Limits(max_connections=100, max_keepalive_connections=20, keepalive_expiry=60)
+
     def do_long_polling_refresh(self, app_id, cluster_name, namespace, callback):
         asyncio.run(self.__long_polling(app_id, cluster_name, namespace, callback=callback))
     
