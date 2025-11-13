@@ -25,14 +25,20 @@ class ApolloClient(object):
                  secret: str = '',
                  callback=None,
                  timeout=1,
-                 data_format='properties'):
+                 data_format='properties',
+                 keepalive_expiry: float = 60.0):
         self.apollo_host = apollo_host
         self.app_id = app_id
         self.cluster = cluster
         self.secret = secret
         self.namespace = namespace
         self.notification_map = defaultdict(int)
-        self.client = httpx.Client(timeout=timeout)
+        limits = httpx.Limits(
+            max_connections=100,
+            max_keepalive_connections=20,
+            keepalive_expiry=keepalive_expiry
+        )
+        self.client = httpx.Client(timeout=timeout, limits=limits)
         self._ip = None
         self.thread = threading.Thread(
             target=self.do_long_polling_refresh, name='refresh_config',
